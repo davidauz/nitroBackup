@@ -32,10 +32,50 @@ function msqlQueryAll($query, $arguments=NULL) {
 	$stmt=$mdb->prepare ($query);
 	$stmt->execute( $arguments );
 }
+function getOneNode($xpath, $query) {
+	$resultList=$xpath->query($query);
+	if(1!=count($resultList))
+		throw new Exception("Need exactly one result for '$query', instead `".  count($resultList) ."` found");
+	return $resultList->item(0);
+}
+
+function xmlLoad($args) {
+	$res=array();
+	$scrf= $_SERVER['SCRIPT_FILENAME'];
+	$localPath=substr($scrf, 0, strpos($scrf,'index')); 
+	$local_file_name=$localPath.gethostname().".xml";
+	if(!file_exists($local_file_name))
+		throw new Exception("`$local_file_name` not found");
+	$m_doc = new DOMDocument();
+	if(FALSE === $m_doc->load( $local_file_name ))
+		throw new Exception("Error loading `$local_file_name`");
+	$m_xpath = new DOMXpath($m_doc);
+	$res['xml_contents'] = file_get_contents($local_file_name);
+	$res['db_user_name']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
+	$res['db_user_password']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_password")->getAttribute("value");
+	$db_list=getOneNode($m_xpath, "//machine/databases/db_list");
+	foreach($db_list->childNodes as $db)
+throw new Exception(":".$m_doc->saveXML($db)."<");
+throw new Exception(":".$db->getAttribute('name'));
+	$fc=$db_list->firstChild;
+throw new Exception("5".$db_list->hasChildNodes()."1");
+throw new Exception(">".$db_list->getAttribute('count')."<");
+throw new Exception("2".$m_doc->saveXML($fc)."2");
+throw new Exception("1".$m_doc->saveXML($db_list)."1");
+throw new Exception("1".$m_doc->saveXML($db_list->firstChild)."2");
+	$db_list=$m_xpath->query("//machine/databases/db_list");
+	$dbList=array();
+	foreach($db_list as $db)
+throw new Exception(":".$db->getAttribute('name'));
+throw new Exception(":".$m_doc->saveXML($db));
+//		$dbList[] = $db->getAttribute('name');
+	$res['db_list']=$dbList;
+	return $res;
+}
 function xmlSave($args) {
 	$scrf= $_SERVER['SCRIPT_FILENAME'];
 	$localPath=substr($scrf, 0, strpos($scrf,'index')); 
-	$local_file_name=$localPath.'local.xml';
+	$local_file_name=$localPath.gethostname().".xml";
 	$fileW = fopen($local_file_name,"w");
 	fwrite( $fileW, $args['rtext']);
 	fclose($fileW);
@@ -65,6 +105,7 @@ function getXML($args) {
 	$bNode->appendChild($cNode);
 
 	$bNode = $ddoc->createElement('db_list');
+	$bNode->setAttribute("count", count($args['dbList']));
 	$dbNode->appendChild($bNode);
 	foreach($args['dbList'] as $oneDb) {
 		$cNode = $ddoc->createElement('db');
@@ -103,6 +144,9 @@ try {
 // AJAX		
 try {
 			switch($verb) {
+				case 'xmlLoad':
+					$res=xmlLoad($arrayData);
+				break;
 				case 'xmlSave':
 					$res=xmlSave($arrayData);
 				break;
@@ -248,6 +292,25 @@ function onRmDbFroList() {
 	$('#listDB').append(new Option(ttext, val));
 	listStoredDB.find('option[value="'+val+'"]').remove();
 }
+function onXMLLoad() {
+	var	arrVal={}
+	;
+	arrVal['verb']='xmlLoad';
+	$.ajax({
+		url: "index.php",
+		type: "POST",
+		data: {	'ajx' : arrVal },
+		success: function(data){
+console.log(data);
+			$('#dbUser').val(data.db_user_name);
+			$('#dbPwd').val(data.db_user_password);
+			$('#texta').val(data.xml_contents);
+		},
+		error: function(data) { 
+			return ajxAlrRetFls(data);
+		}
+	});
+}
 function onXMLSave() {
 	var	texta=$('#texta').val()
 	,	arrVal={}
@@ -355,8 +418,9 @@ function onSaveCFG() {
 </div>
 <div id=rightPane style='width:48%;float:left;'>
 <p>XML:
-<input type=button id='showXml' onClick='onShowXML()' value='Show'> 
+<input type=button id='showXml' onClick='onShowXML()' value='Create'> 
 <input type=button id='xmlSave' onClick='onXMLSave()' value='Save'> 
+<input type=button id='xmlLoad' onClick='onXMLLoad()' value='Load'> 
 </p>
 <textarea style='width:100%' id=texta name=texta rows=50></textarea>
 </div>
