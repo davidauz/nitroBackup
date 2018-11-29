@@ -53,22 +53,11 @@ function xmlLoad($args) {
 	$res['xml_contents'] = file_get_contents($local_file_name);
 	$res['db_user_name']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
 	$res['db_user_password']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_password")->getAttribute("value");
-	$db_list=getOneNode($m_xpath, "//machine/databases/db_list");
-	foreach($db_list->childNodes as $db)
-throw new Exception(":".$m_doc->saveXML($db)."<");
-throw new Exception(":".$db->getAttribute('name'));
-	$fc=$db_list->firstChild;
-throw new Exception("5".$db_list->hasChildNodes()."1");
-throw new Exception(">".$db_list->getAttribute('count')."<");
-throw new Exception("2".$m_doc->saveXML($fc)."2");
-throw new Exception("1".$m_doc->saveXML($db_list)."1");
-throw new Exception("1".$m_doc->saveXML($db_list->firstChild)."2");
-	$db_list=$m_xpath->query("//machine/databases/db_list");
+	$query="//machine/databases/db_list/one_db";
+	$resultList=$m_xpath->query($query);
 	$dbList=array();
-	foreach($db_list as $db)
-throw new Exception(":".$db->getAttribute('name'));
-throw new Exception(":".$m_doc->saveXML($db));
-//		$dbList[] = $db->getAttribute('name');
+	foreach($resultList as $oneNode)
+		$dbList[] = $oneNode->getAttribute('name');
 	$res['db_list']=$dbList;
 	return $res;
 }
@@ -108,7 +97,7 @@ function getXML($args) {
 	$bNode->setAttribute("count", count($args['dbList']));
 	$dbNode->appendChild($bNode);
 	foreach($args['dbList'] as $oneDb) {
-		$cNode = $ddoc->createElement('db');
+		$cNode = $ddoc->createElement('one_db');
 		$cNode->setAttribute('name', $oneDb);
 		$bNode->appendChild($cNode);
 	}
