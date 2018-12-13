@@ -263,12 +263,14 @@ function onAddFolder() {
 }
 function onAddDbToList() {
 	var	listDB=$('#listDB')
+	,	listStoredDB=$('#listStoredDB')
 	,	val=listDB.val()
-	,	ttext=$( "#listDB option:selected" ).text();
+	,	ttext=$( "#listDB option:selected" ).text()
 	;
 	if(null==val)
 		return alertRetFalse('Please select an item first');
-	$('#listStoredDB').append(new Option(ttext, val));
+	listStoredDB.find('option[value="'+val+'"]').remove();
+	listStoredDB.append(new Option(ttext, val));
 	listDB.find('option[value="'+val+'"]').remove();
 }
 function onRmDbFroList() {
@@ -294,7 +296,9 @@ console.log(data);
 			$('#dbUser').val(data.db_user_name);
 			$('#dbPwd').val(data.db_user_password);
 			$('#texta').val(data.xml_contents);
-		},
+			$.each(data.db_list, function(index, dbd){ 
+				$('#listStoredDB').append(new Option(dbd, dbd));
+			})},
 		error: function(data) { 
 			return ajxAlrRetFls(data);
 		}
@@ -304,6 +308,7 @@ function onXMLSave() {
 	var	texta=$('#texta').val()
 	,	arrVal={}
 	;
+	onShowXML();
 	arrVal['verb']='xmlSave';
 	arrVal['rtext']=texta;
 	$.ajax({
@@ -407,7 +412,7 @@ function onSaveCFG() {
 </div>
 <div id=rightPane style='width:48%;float:left;'>
 <p>XML:
-<input type=button id='showXml' onClick='onShowXML()' value='Create'> 
+<input type=button id='showXml' onClick='onShowXML()' value='Show'> 
 <input type=button id='xmlSave' onClick='onXMLSave()' value='Save'> 
 <input type=button id='xmlLoad' onClick='onXMLLoad()' value='Load'> 
 </p>
