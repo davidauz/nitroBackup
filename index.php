@@ -51,6 +51,8 @@ function xmlLoad($args) {
 		throw new Exception("Error loading `$local_file_name`");
 	$m_xpath = new DOMXpath($m_doc);
 	$res['xml_contents'] = file_get_contents($local_file_name);
+	$res['bf_home_dir']=getOneNode($m_xpath, "//machine")->getAttribute("bf_home_dir");
+	$res['bfi']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
 	$res['db_user_name']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
 	$res['db_user_password']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_password")->getAttribute("value");
 	$query="//machine/databases/db_list/one_db";
@@ -72,14 +74,13 @@ function createScript($args) {
 	$ddoc = new DOMDocument("1.0","utf-8");
 	if(FALSE === $ddoc->LoadXml( $xmlText ))
 		throw new Exception("Error reading XML from `$xmlText` found");
-$scriptText='
-#!/bin/sh
+$scriptText='#!/bin/sh
 
 # where to put the backup files
-HOMEDIR="/home/dummy/backupFiles"
+HOMEDIR="bf_home_dir"
 #user for connecting to databases
-DBUSER=root
-DBPWD=chetro93
+DBUSER=db_user_name
+DBPWD=db_user_password
 
 # no need to change these
 BACKUPD="/tmp"
@@ -89,7 +90,7 @@ TARFILE="${DATES}.${MYHOST}.backup.tar"
 TARFPATH=${HOMEDIR}/${TARFILE}
 GZFILE="${TARFILE}.gz"
 TIMESTAMPFILE=$MYHOST.TIMESTAMP.txt
-DBLIST=""
+DBLIST="db_list"
 
 aLog() {
 	echo "--- $*"
@@ -119,30 +120,6 @@ if [ ! -e $HOMEDIR ]; then
 	fi
 fi
 
-case $MYHOST in 
-	susechn)
-		DBLIST="CCISdb mail"
-	;;
-	media)
-		DBLIST="bestDb italianaDb joomlaDb my_wiki rwa_data scliDb "
-	;;
-	chweb)
-		DBLIST="coolhead_mail rightway rwa_mail rwa_web"
-	;;
-	bridge3)
-		DBLIST=""
-	;;
-	bridge2)
-		DBLIST="my_wiki rwa_data rwa_mail"
-	;;
-	mxh)
-		DBLIST="rwa_mail"
-	;;
-	bw)
-		DBLIST="mail itariajin"
-	;;
-esac
-
 aLog "This is $0"
 cd $HOMEDIR
 aLog "PWD is:"
@@ -158,41 +135,7 @@ rm $TIMESTAMPFILE
 
 cd /
 
-for i in \
-	etc/apache2 \
-	etc/courier \
-	etc/default/saslauthd \
-	etc/hostname \
-	etc/hosts \
-	etc/hosts.allow \
-	etc/hosts.deny \
-	etc/init.d \
-	etc/init.d/iptables.up.rules \
-	etc/libvirt \
-	etc/mysql \
-	etc/opendkim \
-	etc/opendkim.conf \
-	etc/openvpn \
-	etc/postgresql \
-	etc/odoo \
-	etc/pam-mysql.conf \
-	etc/pam.conf \
-	etc/pam.d \
-	etc/pam.d/smtp \
-	etc/passwd \
-	etc/passwd- \
-	etc/postfix \
-	etc/resolv.conf \
-	etc/ssh \
-	etc/ssh/sshd_config \
-	etc/stunnel \
-	root/.ssh \
-	root/bin \
-	root/*txt \
-	root/revCtl \
-	usr/local/bin \
-	var/www/cnitaly \
-	var/www/infoWiki
+for i in folders_list
 	do
 	if [ -e $i ]; then
 		logExe "tar uf $TARFPATH $i"
@@ -212,12 +155,10 @@ rm $TARFILE
 # delete old files
 logExe "find . -mtime +5 -exec rm {} \;"
 
-
-
-
-'
-	return true;
+';
+	return $scriptText;
 }
+
 function xmlSave($args) {
 	$scrf= $_SERVER['SCRIPT_FILENAME'];
 	$localPath=substr($scrf, 0, strpos($scrf,'index')); 
@@ -235,6 +176,7 @@ function getXML($args) {
 
 	$machine = $ddoc->createElement('machine');
 	$machine->setAttribute("name", gethostname());
+	$machine->setAttribute("bf_home_dir", $args['bf_home_dir']);
 	$ddoc->appendChild($machine);
 	$dbNode = $ddoc->createElement('databases');
 	$machine->appendChild($dbNode);
@@ -260,6 +202,7 @@ function getXML($args) {
 	}
 
 	$bNode = $ddoc->createElement('folders');
+	$bNode->setAttribute("count", count($args['foldersList']));
 	$machine->appendChild($bNode);
 	foreach($args['foldersList'] as $oneDb) {
 		$cNode = $ddoc->createElement('folder');
@@ -341,6 +284,13 @@ try {
     <meta charset="utf-8">
     <title>NITRO Backup</title>
 </head>
+<style>
+fieldset {background-color:#cccccc;border:1px  #50a0a0 solid;padding:5px;margin:5px;}
+textarea {background-color:#f0f0ff;border:1px  #50a0a0 solid;padding:5px;margin:5px;}
+legend {border:1px #50a0a0 solid;background-color:#ccccff;font-weight: bold;}
+h1 {color: blue;} // styles applied to h1 tag
+p {color: red;} // styles applied to p tag
+</style>
 <script type="text/javascript" src="/js/jquery.min.js"></script>
 <script language="javascript" type="text/javascript">
 function alertRetFalse(msg) {
@@ -353,19 +303,13 @@ function ajxAlrRetFls(data) {
 
 	var msg=data.statusText;
 	if(0<data.responseText.length) {
-		var mob=JSON.parse(data.responseText);
+//	var mob=JSON.parse(data.responseText);
+		var mob=data.responseText;
 		msg=msg+'; '+mob.messages;
 	}
 	return alertRetFalse(msg);
 }
-function onDelFolder() {
-	var	listFolders=$('#listFolders')
-	,	folderToDelete=listFolders.val()
-	;
-	if(null==folderToDelete)
-		return alertRetFalse('Please select an item first');
-	listFolders.find('option[value="'+folderToDelete+'"]').remove();
-}
+
 function onchkConBtn() {
 	var	dbUser=$('#dbUser').val()
 	,	dbPwd=$('#dbPwd').val()
@@ -395,11 +339,22 @@ function onchkConBtn() {
 		}
 	});
 }
+function onDelFolder() {
+	var	listFolders=$('#listFolders')
+	,	folderToDelete=listFolders.val()
+	;
+	if(null==folderToDelete)
+		return alertRetFalse('Please select an item first');
+	listFolders.find('option[value="'+folderToDelete+'"]').remove();
+	$('#addFolder').val(folderToDelete);
+}
 function onAddFolder() {
-	var	folderToAdd=$('#addFolder').val()
+	var	folderInput=$('#addFolder')
+	,	folderToAdd=folderInput.val()
 	,	listFolders=$('#listFolders')
 	;
 	$('#listFolders').append(new Option(folderToAdd, folderToAdd));
+	folderInput.val('');
 }
 function onAddDbToList() {
 	var	listDB=$('#listDB')
@@ -442,6 +397,7 @@ function onXMLLoad() {
 			$('#dbUser').val(data.db_user_name);
 			$('#dbPwd').val(data.db_user_password);
 			$('#texta').val(data.xml_contents);
+			$('#bf_home_dir').val(data.bf_home_dir);
 			var db_list=data.db_list;
 			for(var db in db_list) {
 				oneDb=db_list[db];
@@ -494,7 +450,7 @@ function onCreateScript(){
 		type: "POST",
 		data: {	'ajx' : arrVal },
 		success: function(data){
-			alert('SUCCESS');
+			$('#scriptsh').val(data);
 		},
 		error: function(data) { 
 			return ajxAlrRetFls(data);
@@ -504,6 +460,7 @@ function onCreateScript(){
 function onShowXML() {
 	var	dbUser=$('#dbUser').val()
 	,	dbPwd=$('#dbPwd').val()
+	,	bf_home_dir=$('#bf_home_dir').val()
 	,	texta=$('#texta')
 	,	arrVal={}
 	,	listStoredDB=$('#listStoredDB')
@@ -513,6 +470,7 @@ function onShowXML() {
 	;
 	arrVal['dbUser']=dbUser;
 	arrVal['dbPwd']=dbPwd;
+	arrVal['bf_home_dir']=bf_home_dir;
 	$('#listStoredDB option').each(function(){ 
 		DBs.push( $(this).text() );
 	});
@@ -541,8 +499,11 @@ function onShowXML() {
 <form action='#' id='uplData' name='uplData' method='post' enctype='multipart/form-data' onsubmit='return checkform()' >
 <h3>This machine name: <?=gethostname()?> </h3>
 <div style="clear:both"></div>
+
+
+
 <fieldset>
-<legend>DATABASES</legend>
+<legend style='border:1px  #50a0a0 solid;background-color:#ccccff'>Databases</legend>
 <p>User: <input type=text name=dbUser id=dbUser size=10 value=<?=$dbUser?>>
 Password: <input type=text name=dbPwd id=dbPwd size=10value=<?=$dbPwd?>>
 <input type=button id='chkConBtn' onClick='onchkConBtn()' value='Check Connection'> </p>
@@ -564,15 +525,34 @@ Password: <input type=text name=dbPwd id=dbPwd size=10value=<?=$dbPwd?>>
 </div>
 </fieldset>
 
+
+
+
+<div id=divFolders style='float:left;'>
 <fieldset>
-<legend>FOLDERS</legend>
+<legend>Folders</legend>
 <p>This folder <input type=text name=addFolder id=addFolder>
 <input type=button id='addFolderButton' onClick='onAddFolder()' value='Add'> </p>
-<p>Files/folders being stored:</p>
+<p>Files/folders being stored:<input type=button id='delFolderButton' onClick='onDelFolder()' value='Delete selected'></p>
 <select multiple=multiple size=12 name=listFolders[] id=listFolders></select>
-<input type=button id='delFolderButton' onClick='onDelFolder()' value='Delete selected folder'></p>
+</p>
 <p></p>
 </fieldset>
+</div>
+
+
+<div id=otherParameters style='float:left;'>
+<fieldset>
+<legend>Other parameters</legend>
+<p>Where to store backup files</p>
+<p><input type=text name=bf_home_dir id=bf_home_dir></p>
+</fieldset>
+</div>
+
+
+
+
+
 </form>
 </div>
 <div id=rightPane style='width:48%;float:left;'>
@@ -580,10 +560,11 @@ Password: <input type=text name=dbPwd id=dbPwd size=10value=<?=$dbPwd?>>
 <input type=button id='showXml' onClick='onShowXML()' value='Show'> 
 <input type=button id='xmlSave' onClick='onXMLSave()' value='Save shown'> 
 <input type=button id='xmlLoad' onClick='onXMLLoad()' value='Load'> 
+<a href='?'>Reset</a>
 </p>
 <textarea style='width:100%' id=texta name=texta rows=30></textarea>
-<input type=button id='createScript' onClick='onCreateScript()' value='Create Script on shown XML'> </p>
-<a href='?'>Reset</a>
+<input type=button id='createScript' onClick='onCreateScript()' value='Create Script'> </p>
+<textarea style='width:100%' id=scriptsh name=scriptsh rows=30></textarea>
 </div>
 <div style="clear:both"></div>
 
