@@ -303,7 +303,7 @@ try {
 <html lang="en" class="ltr" dir="ltr">
 <head>
     <meta charset="utf-8">
-    <title>NITRO Backup</title>
+    <title>NITRO Backup <?=gethostname()?></title>
 </head>
 <style>
 fieldset {background-color:#cccccc;border:1px  #50a0a0 solid;padding:5px;margin:5px;}
