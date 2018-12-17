@@ -74,13 +74,34 @@ function createScript($args) {
 	$ddoc = new DOMDocument("1.0","utf-8");
 	if(FALSE === $ddoc->LoadXml( $xmlText ))
 		throw new Exception("Error reading XML from `$xmlText` found");
+	$m_xpath = new DOMXpath($ddoc);
+	$arrVal=array();
+	$arrVal['bf_home_dir']=getOneNode($m_xpath, "//machine")->getAttribute("bf_home_dir");
+	$arrVal['db_user_name']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
+	$arrVal['db_user_password']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_password")->getAttribute("value");
+
+	$resultList=$m_xpath->query( "//machine/databases/db_list/one_db" );
+	$db_list="";
+	foreach($resultList as $oneNode)
+		$db_list .= $oneNode->getAttribute('name')." ";
+	$arrVal['db_list']=$db_list;
+
+	$resultList=$m_xpath->query( "//machine/folders/folder" );
+	$folders_list="";
+	foreach($resultList as $oneNode) {
+		$node=trim($oneNode->getAttribute('name'), '/');
+		$folders_list .= "$node ";
+	}
+
+	$arrVal['folders_list']=$folders_list;
+	
 $scriptText='#!/bin/sh
 
 # where to put the backup files
 HOMEDIR="bf_home_dir"
 #user for connecting to databases
-DBUSER=db_user_name
-DBPWD=db_user_password
+DBUSER="db_user_name"
+DBPWD="db_user_password"
 
 # no need to change these
 BACKUPD="/tmp"
@@ -135,14 +156,12 @@ rm $TIMESTAMPFILE
 
 cd /
 
-for i in folders_list
+for node in folders_list
 	do
-	if [ -e $i ]; then
-		logExe "tar uf $TARFPATH $i"
+	if [ -e $node ]; then
+		logExe "tar uf $TARFPATH $node"
 	fi
 done
-
-logExe "tar uf $TARFPATH root/*txt"
 
 cd $HOMEDIR
 gzip -c $TARFILE > ${GZFILE}
@@ -156,6 +175,8 @@ rm $TARFILE
 logExe "find . -mtime +5 -exec rm {} \;"
 
 ';
+	foreach($arrVal as $key => $val)
+		$scriptText = str_replace($key, $val, $scriptText);
 	return $scriptText;
 }
 
@@ -299,13 +320,10 @@ function alertRetFalse(msg) {
 }
 
 function ajxAlrRetFls(data) { 
-	console.log(data);
-
 	var msg=data.statusText;
 	if(0<data.responseText.length) {
-//	var mob=JSON.parse(data.responseText);
-		var mob=data.responseText;
-		msg=msg+'; '+mob.messages;
+		var mob=JSON.parse(data.responseText);
+		msg=msg+': '+mob.messages;
 	}
 	return alertRetFalse(msg);
 }
@@ -492,6 +510,12 @@ function onShowXML() {
 		}
 	});
 }
+
+function setupDownloadLink(link, code) 
+{
+	link.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(code); 
+}
+
 </script>
 <body>
 
@@ -565,6 +589,7 @@ Password: <input type=text name=dbPwd id=dbPwd size=10value=<?=$dbPwd?>>
 <textarea style='width:100%' id=texta name=texta rows=30></textarea>
 <input type=button id='createScript' onClick='onCreateScript()' value='Create Script'> </p>
 <textarea style='width:100%' id=scriptsh name=scriptsh rows=30></textarea>
+<a href="" id="link" onclick="setupDownloadLink(this, scriptsh.value)" download="backupScript.sh">Download Above Code</a>
 </div>
 <div style="clear:both"></div>
 
