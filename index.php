@@ -177,7 +177,10 @@ logExe "find . -mtime +5 -exec rm {} \;"
 ';
 	foreach($arrVal as $key => $val)
 		$scriptText = str_replace($key, $val, $scriptText);
-	return $scriptText;
+	$fileW = fopen('nitroBackup.sh',"w");
+	fwrite($fileW, $scriptText);
+	fclose($fileW);
+	return true;
 }
 
 function xmlSave($args) {
@@ -468,7 +471,7 @@ function onCreateScript(){
 		type: "POST",
 		data: {	'ajx' : arrVal },
 		success: function(data){
-			$('#scriptsh').val(data);
+			alert("SUCCESS");
 		},
 		error: function(data) { 
 			return ajxAlrRetFls(data);
@@ -509,11 +512,6 @@ function onShowXML() {
 			return ajxAlrRetFls(data);
 		}
 	});
-}
-
-function setupDownloadLink(link, code) 
-{
-	link.href = 'data:text/plain;charset=utf-8,' + encodeURIComponent(code); 
 }
 
 </script>
@@ -588,8 +586,6 @@ Password: <input type=text name=dbPwd id=dbPwd size=10value=<?=$dbPwd?>>
 </p>
 <textarea style='width:100%' id=texta name=texta rows=30></textarea>
 <input type=button id='createScript' onClick='onCreateScript()' value='Create Script'> </p>
-<textarea style='width:100%' id=scriptsh name=scriptsh rows=30></textarea>
-<a href="" id="link" onclick="setupDownloadLink(this, scriptsh.value)" download="backupScript.sh">Download Above Code</a>
 </div>
 <div style="clear:both"></div>
 

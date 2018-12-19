@@ -1,3 +1,4 @@
 *.xml
 php.tags
 *swp
+*sh
