@@ -52,6 +52,7 @@ function xmlLoad($args) {
 	$m_xpath = new DOMXpath($m_doc);
 	$res['xml_contents'] = file_get_contents($local_file_name);
 	$res['bf_home_dir']=getOneNode($m_xpath, "//machine")->getAttribute("bf_home_dir");
+	$res['old_files_age']=getOneNode($m_xpath, "//machine")->getAttribute("old_files_age");
 	$res['bfi']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
 	$res['db_user_name']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
 	$res['db_user_password']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_password")->getAttribute("value");
@@ -77,6 +78,7 @@ function createScript($args) {
 	$m_xpath = new DOMXpath($ddoc);
 	$arrVal=array();
 	$arrVal['bf_home_dir']=getOneNode($m_xpath, "//machine")->getAttribute("bf_home_dir");
+	$arrVal['old_files_age']=getOneNode($m_xpath, "//machine")->getAttribute("old_files_age");
 	$arrVal['db_user_name']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
 	$arrVal['db_user_password']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_password")->getAttribute("value");
 
@@ -172,7 +174,7 @@ aLog $LOGMSG
 rm $TARFILE
 
 # delete old files
-logExe "find . -mtime +5 -exec rm {} \;"
+logExe "find . -mtime +old_files_age -exec rm {} \;"
 
 ';
 	foreach($arrVal as $key => $val)
@@ -201,6 +203,7 @@ function getXML($args) {
 	$machine = $ddoc->createElement('machine');
 	$machine->setAttribute("name", gethostname());
 	$machine->setAttribute("bf_home_dir", $args['bf_home_dir']);
+	$machine->setAttribute("old_files_age", $args['old_files_age']);
 	$ddoc->appendChild($machine);
 	$dbNode = $ddoc->createElement('databases');
 	$machine->appendChild($dbNode);
@@ -419,6 +422,7 @@ function onXMLLoad() {
 			$('#dbPwd').val(data.db_user_password);
 			$('#texta').val(data.xml_contents);
 			$('#bf_home_dir').val(data.bf_home_dir);
+			$('#old_files_age').val(data.old_files_age);
 			var db_list=data.db_list;
 			for(var db in db_list) {
 				oneDb=db_list[db];
@@ -482,6 +486,7 @@ function onShowXML() {
 	var	dbUser=$('#dbUser').val()
 	,	dbPwd=$('#dbPwd').val()
 	,	bf_home_dir=$('#bf_home_dir').val()
+	,	old_files_age=$('#old_files_age').val()
 	,	texta=$('#texta')
 	,	arrVal={}
 	,	listStoredDB=$('#listStoredDB')
@@ -492,6 +497,7 @@ function onShowXML() {
 	arrVal['dbUser']=dbUser;
 	arrVal['dbPwd']=dbPwd;
 	arrVal['bf_home_dir']=bf_home_dir;
+	arrVal['old_files_age']=old_files_age;
 	$('#listStoredDB option').each(function(){ 
 		DBs.push( $(this).text() );
 	});
@@ -566,8 +572,12 @@ Password: <input type=text name=dbPwd id=dbPwd size=10value=<?=$dbPwd?>>
 <div id=otherParameters style='float:left;'>
 <fieldset>
 <legend>Other parameters</legend>
-<p>Where to store backup files</p>
-<p><input type=text name=bf_home_dir id=bf_home_dir></p>
+<ul>
+<li>Where to store backup files<br />
+<input type=text name=bf_home_dir id=bf_home_dir></li>
+<li>Old files max age<br />
+<input type=text name=old_files_age id=old_files_age></li>
+</ul>
 </fieldset>
 </div>
 
