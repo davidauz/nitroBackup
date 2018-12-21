@@ -71,10 +71,10 @@ function xmlLoad($args) {
 	return $res;
 }
 function createScript($args) {
-	$xmlText=$args['rtext'];
+	$xmlContents=createXML($args);
 	$ddoc = new DOMDocument("1.0","utf-8");
-	if(FALSE === $ddoc->LoadXml( $xmlText ))
-		throw new Exception("Error reading XML from `$xmlText` found");
+	if(FALSE === $ddoc->LoadXml( $xmlContents ))
+		throw new Exception("Error reading XML from `$xmlContents` found");
 	$m_xpath = new DOMXpath($ddoc);
 	$arrVal=array();
 	$arrVal['bf_home_dir']=getOneNode($m_xpath, "//machine")->getAttribute("bf_home_dir");
@@ -187,15 +187,16 @@ logExe "find . -mtime +old_files_age -exec rm {} \;"
 
 function xmlSave($args) {
 	$scrf= $_SERVER['SCRIPT_FILENAME'];
+	$xmlContents=createXML($args);
 	$localPath=substr($scrf, 0, strpos($scrf,'index')); 
 	$local_file_name=$localPath.gethostname().".xml";
 	$fileW = fopen($local_file_name,"w");
-	fwrite( $fileW, $args['rtext']);
+	fwrite( $fileW, $xmlContents);
 	fclose($fileW);
 	if(!file_exists($local_file_name))
 		throw new Exception("cannot write to `$local_file_name`");
 }
-function getXML($args) {
+function createXML($args) {
 	$ddoc = new DOMDocument("1.0","utf-8");
 	$ddoc->formatOutput = true;
 	$todayDate=date("Y-m-d");
@@ -268,9 +269,6 @@ try {
 				break;
 				case 'xmlSave':
 					$res=xmlSave($arrayData);
-				break;
-				case 'showXml':
-					$res=getXML($arrayData);
 				break;
 				case 'listDatabases':
 					$res=listDatabases($arrayData);
@@ -445,12 +443,10 @@ function onXMLLoad() {
 	});
 }
 function onXMLSave() {
-	var	texta=$('#texta').val()
-	,	arrVal={}
+	var	arrVal={}
 	;
-	onShowXML();
+	arrVal=prepareArrayForXML();
 	arrVal['verb']='xmlSave';
-	arrVal['rtext']=texta;
 	$.ajax({
 		url: "index.php",
 		type: "POST",
@@ -464,12 +460,10 @@ function onXMLSave() {
 	});
 }
 function onCreateScript(){
-	var	texta=$('#texta').val()
-	,	arrVal={}
+	var	arrVal={}
 	;
-	onShowXML();
+	arrVal=prepareArrayForXML();
 	arrVal['verb']='createScript';
-	arrVal['rtext']=texta;
 	$.ajax({
 		url: "index.php",
 		type: "POST",
@@ -482,7 +476,7 @@ function onCreateScript(){
 		}
 	});
 }
-function onShowXML() {
+function prepareArrayForXML() {
 	var	dbUser=$('#dbUser').val()
 	,	dbPwd=$('#dbPwd').val()
 	,	bf_home_dir=$('#bf_home_dir').val()
@@ -506,30 +500,25 @@ function onShowXML() {
 		bFolders.push( $(this).text() );
 	});
 	arrVal['foldersList']=bFolders;
-	arrVal['verb']='showXml';
-	$.ajax({
-		url: "index.php",
-		type: "POST",
-		data: {	'ajx' : arrVal },
-		success: function(data){
-			texta.val(data);
-		},
-		error: function(data) { 
-			return ajxAlrRetFls(data);
-		}
-	});
+	return arrVal;
 }
 
 </script>
 <body>
 
-<div id=leftPane style='width:48%;float:left;'>
-<form action='#' id='uplData' name='uplData' method='post' enctype='multipart/form-data' onsubmit='return checkform()' >
-<h3>This machine name: <?=gethostname()?> </h3>
+<div id=mainPane style='width:98%;float:left;'>
+<span style='font-size:large;'>
+This machine name:  <a href='?' title=RESET><?=gethostname()?></a>
+</span>
+<input type=button id='xmlLoad' onClick='onXMLLoad()' value='Load cfg'> 
+<input type=button id='xmlSave' onClick='onXMLSave()' value='Save cfg'> 
+<!-- textarea style='width:100%' id=texta name=texta rows=30></textarea -->
+<input type=button id='createScript' onClick='onCreateScript()' value='Create Script'> </p>
 <div style="clear:both"></div>
 
 
 
+<div style='float:left;width:45%;'>
 <fieldset>
 <legend style='border:1px  #50a0a0 solid;background-color:#ccccff'>Databases</legend>
 <p>User: <input type=text name=dbUser id=dbUser size=10 value=<?=$dbUser?>>
@@ -552,30 +541,35 @@ Password: <input type=text name=dbPwd id=dbPwd size=10value=<?=$dbPwd?>>
 	<select multiple=multiple size=12 name='listStoredDB[]' id=listStoredDB ondblclick='onRmDbFroList()'></select>
 </div>
 </fieldset>
+</div>
 
 
 
 
+<div style='float:left;width:45%;'>
 <div id=divFolders style='float:left;'>
 <fieldset>
 <legend>Folders</legend>
 <p>This folder <input type=text name=addFolder id=addFolder>
 <input type=button id='addFolderButton' onClick='onAddFolder()' value='Add'> </p>
-<p>Files/folders being stored:<input type=button id='delFolderButton' onClick='onDelFolder()' value='Delete selected'></p>
-<select multiple=multiple size=12 name=listFolders[] id=listFolders></select>
+<p>Files/folders being stored:</p>
+<select multiple=multiple size=13 name=listFolders[] id=listFolders></select><input type=button id='delFolderButton' onClick='onDelFolder()' value='Delete
+selected'>
 </p>
 <p></p>
 </fieldset>
 </div>
+</div>
 
+<div style="clear:both"></div>
 
 <div id=otherParameters style='float:left;'>
 <fieldset>
 <legend>Other parameters</legend>
 <ul>
-<li>Where to store backup files<br />
+<li>Where to store backup files:
 <input type=text name=bf_home_dir id=bf_home_dir></li>
-<li>Old files max age<br />
+<li>Old files max age:
 <input type=text name=old_files_age id=old_files_age></li>
 </ul>
 </fieldset>
@@ -585,17 +579,6 @@ Password: <input type=text name=dbPwd id=dbPwd size=10value=<?=$dbPwd?>>
 
 
 
-</form>
-</div>
-<div id=rightPane style='width:48%;float:left;'>
-<p>XML:
-<input type=button id='showXml' onClick='onShowXML()' value='Show'> 
-<input type=button id='xmlSave' onClick='onXMLSave()' value='Save shown'> 
-<input type=button id='xmlLoad' onClick='onXMLLoad()' value='Load'> 
-<a href='?'>Reset</a>
-</p>
-<textarea style='width:100%' id=texta name=texta rows=30></textarea>
-<input type=button id='createScript' onClick='onCreateScript()' value='Create Script'> </p>
 </div>
 <div style="clear:both"></div>
 
