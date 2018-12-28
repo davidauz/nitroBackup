@@ -168,7 +168,7 @@ done
 cd $HOMEDIR
 gzip -c $TARFILE > ${GZFILE}
 
-logExe "ls -la ${GZFILE}"
+logExe "ls -la"
 aLog $LOGMSG
 
 rm $TARFILE
@@ -316,7 +316,7 @@ legend {border:1px #50a0a0 solid;background-color:#ccccff;font-weight: bold;}
 h1 {color: blue;} // styles applied to h1 tag
 p {color: red;} // styles applied to p tag
 </style>
-<script type="text/javascript" src="/js/jquery.min.js"></script>
+<script type="text/javascript" src="jquery.min.js"></script>
 <script language="javascript" type="text/javascript">
 function alertRetFalse(msg) {
 	alert(msg);
