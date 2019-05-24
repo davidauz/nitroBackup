@@ -2,8 +2,7 @@
 $mysql_hostname = "localhost"; 
 $mysql_user = ""; 
 $mysql_password = ""; 
-$mysql_database = "rwa_data"; 
-$mcol = "mysql:host=$mysql_hostname;dbname=$mysql_database"; 
+$mcol = "mysql:host=$mysql_hostname"; 
 $mdb=null;
 
 function dbConnect() {
@@ -53,6 +52,7 @@ function xmlLoad($args) {
 	$res['xml_contents'] = file_get_contents($local_file_name);
 	$res['bf_home_dir']=getOneNode($m_xpath, "//machine")->getAttribute("bf_home_dir");
 	$res['old_files_age']=getOneNode($m_xpath, "//machine")->getAttribute("old_files_age");
+	$res['rsync_to']=getOneNode($m_xpath, "//machine")->getAttribute("rsync_to");
 	$res['bfi']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
 	$res['db_user_name']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
 	$res['db_user_password']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_password")->getAttribute("value");
@@ -79,6 +79,7 @@ function createScript($args) {
 	$arrVal=array();
 	$arrVal['bf_home_dir']=getOneNode($m_xpath, "//machine")->getAttribute("bf_home_dir");
 	$arrVal['old_files_age']=getOneNode($m_xpath, "//machine")->getAttribute("old_files_age");
+	$arrVal['rsync_to']=getOneNode($m_xpath, "//machine")->getAttribute("rsync_to");
 	$arrVal['db_user_name']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
 	$arrVal['db_user_password']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_password")->getAttribute("value");
 
@@ -166,6 +167,9 @@ for node in folders_list
 done
 
 cd $HOMEDIR
+echo -n "Current folder: "
+pwd
+
 gzip -c $TARFILE > ${GZFILE}
 
 logExe "ls -la"
@@ -175,6 +179,8 @@ rm $TARFILE
 
 # delete old files
 logExe "find . -mtime +old_files_age -exec rm {} \;"
+
+logExe "rsync -azvr --delete ${HOMEDIR}/ rsync_to"
 
 ';
 	foreach($arrVal as $key => $val)
@@ -205,6 +211,7 @@ function createXML($args) {
 	$machine->setAttribute("name", gethostname());
 	$machine->setAttribute("bf_home_dir", $args['bf_home_dir']);
 	$machine->setAttribute("old_files_age", $args['old_files_age']);
+	$machine->setAttribute("rsync_to", $args['rsync_to']);
 	$ddoc->appendChild($machine);
 	$dbNode = $ddoc->createElement('databases');
 	$machine->appendChild($dbNode);
@@ -256,40 +263,12 @@ $dbPwd="";
 try {
 	if($_SERVER["REQUEST_METHOD"] == "POST" ) {
 		if(array_key_exists('ajx', $_POST)) {
-		$arrayData=$_POST['ajx'];
-		$verb=$arrayData['verb'];
 // AJAX		
-try {
-			switch($verb) {
-				case 'createScript':
-					$res=createScript($arrayData);
-				break;
-				case 'xmlLoad':
-					$res=xmlLoad($arrayData);
-				break;
-				case 'xmlSave':
-					$res=xmlSave($arrayData);
-				break;
-				case 'listDatabases':
-					$res=listDatabases($arrayData);
-				break;
-				default:
-					throw new Exception("Invalid verb `$verb`");
-				break;
-			}
-        		header('Content-Type: application/json; charset=UTF-8');
-        		die (json_encode($res));
-} catch(Exception $exc) {
-	error_log($exc->getMessage());
-        header('HTTP/1.1 500 Server Exception');
-        header('Content-Type: application/json; charset=UTF-8');
-        $result=array();
-        $result['messages'] = $exc->getMessage();
-        die(json_encode($result));
-}
-		} else {
-			$dbUser=$_POST['dbUser'];
-			$dbPwd=$_POST['dbPwd'];
+			$ajxParams=$_POST['ajx'];
+			$funcName=$ajxParams['verb'];
+			$res=$funcName($ajxParams);
+       			header('Content-Type: application/json; charset=UTF-8');
+       			die (json_encode($res));
 		}
 	}
 } catch(Exception $exc) {
@@ -421,6 +400,7 @@ function onXMLLoad() {
 			$('#texta').val(data.xml_contents);
 			$('#bf_home_dir').val(data.bf_home_dir);
 			$('#old_files_age').val(data.old_files_age);
+			$('#rsync_to').val(data.rsync_to);
 			var db_list=data.db_list;
 			for(var db in db_list) {
 				oneDb=db_list[db];
@@ -481,6 +461,7 @@ function prepareArrayForXML() {
 	,	dbPwd=$('#dbPwd').val()
 	,	bf_home_dir=$('#bf_home_dir').val()
 	,	old_files_age=$('#old_files_age').val()
+	,	rsync_to=$('#rsync_to').val()
 	,	texta=$('#texta')
 	,	arrVal={}
 	,	listStoredDB=$('#listStoredDB')
@@ -492,6 +473,7 @@ function prepareArrayForXML() {
 	arrVal['dbPwd']=dbPwd;
 	arrVal['bf_home_dir']=bf_home_dir;
 	arrVal['old_files_age']=old_files_age;
+	arrVal['rsync_to']=rsync_to;
 	$('#listStoredDB option').each(function(){ 
 		DBs.push( $(this).text() );
 	});
@@ -571,6 +553,8 @@ selected'>
 <input type=text name=bf_home_dir id=bf_home_dir></li>
 <li>Old files max age:
 <input type=text name=old_files_age id=old_files_age></li>
+<li>rsync to:
+<input type=text name=rsync_to id=rsync_to></li>
 </ul>
 </fieldset>
 </div>
