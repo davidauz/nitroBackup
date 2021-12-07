@@ -1,17 +1,17 @@
 <?
 
-function getOneNode($xpath, $query) {
-	$resultList=$xpath->query($query);
-	if(1!=count($resultList))
-		throw new Exception("Need exactly one result for '$query', instead `".  count($resultList) ."` found");
-	return $resultList->item(0);
+function query_node($xpath, $query) {
+	$q_results=$xpath->query($query);
+	if(1!=count($q_results))
+		throw new Exception("Need exactly one result for '$query', instead `".  count($q_results) ."` found");
+	return $q_results->item(0);
 }
 
 function xmlLoad($args) {
 	$res=array();
-	$scrf= $_SERVER['SCRIPT_FILENAME'];
-	$localPath=substr($scrf, 0, strpos($scrf,'index')); 
-	$local_file_name=$localPath.gethostname().".xml";
+	$script_fn= $_SERVER['SCRIPT_FILENAME'];
+	$local_path=substr($script_fn, 0, strpos($script_fn,'index')); 
+	$local_file_name=$local_path.gethostname().".xml";
 	if(!file_exists($local_file_name))
 		throw new Exception("`$local_file_name` not found");
 	$m_doc = new DOMDocument();
@@ -19,55 +19,55 @@ function xmlLoad($args) {
 		throw new Exception("Error loading `$local_file_name`");
 	$m_xpath = new DOMXpath($m_doc);
 	$res['xml_contents'] = file_get_contents($local_file_name);
-	$res['bf_home_dir']=getOneNode($m_xpath, "//machine")->getAttribute("bf_home_dir");
-	$res['old_files_age']=getOneNode($m_xpath, "//machine")->getAttribute("old_files_age");
-	$res['rsync_to']=getOneNode($m_xpath, "//machine")->getAttribute("rsync_to");
-	$res['bfi']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
-	$res['db_user_name']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
-	$res['db_user_password']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_password")->getAttribute("value");
+	$res['bf_home_dir']=query_node($m_xpath, "//machine")->getAttribute("bf_home_dir");
+	$res['old_files_age']=query_node($m_xpath, "//machine")->getAttribute("old_files_age");
+	$res['rsync_to']=query_node($m_xpath, "//machine")->getAttribute("rsync_to");
+	$res['bfi']=query_node($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
+	$res['db_user_name']=query_node($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
+	$res['db_user_password']=query_node($m_xpath, "//machine/databases/db_credentials/db_user_password")->getAttribute("value");
 	$query="//machine/databases/db_list/one_db";
-	$resultList=$m_xpath->query($query);
+	$q_results=$m_xpath->query($query);
 	$dbList=array();
-	foreach($resultList as $oneNode)
-		$dbList[] = $oneNode->getAttribute('name');
+	foreach($q_results as $q_node)
+		$dbList[] = $q_node->getAttribute('name');
 	$res['db_list']=$dbList;
 	$query="//machine/folders/folder";
-	$resultList=$m_xpath->query($query);
+	$q_results=$m_xpath->query($query);
 	$foldersList=array();
-	foreach($resultList as $oneNode)
-		$foldersList[] = $oneNode->getAttribute('name');
+	foreach($q_results as $q_node)
+		$foldersList[] = $q_node->getAttribute('name');
 	$res['folders_list']=$foldersList;
 	return $res;
 }
 function createScript($args) {
-	$xmlContents=createXML($args);
-	$ddoc = new DOMDocument("1.0","utf-8");
-	if(FALSE === $ddoc->LoadXml( $xmlContents ))
-		throw new Exception("Error reading XML from `$xmlContents` found");
-	$m_xpath = new DOMXpath($ddoc);
+	$xml_contents=create_xml($args);
+	$dom_doc = new DOMDocument("1.0","utf-8");
+	if(FALSE === $dom_doc->LoadXml( $xml_contents ))
+		throw new Exception("Error reading XML from `$xml_contents` found");
+	$m_xpath = new DOMXpath($dom_doc);
 	$arrVal=array();
-	$arrVal['bf_home_dir']=getOneNode($m_xpath, "//machine")->getAttribute("bf_home_dir");
-	$arrVal['old_files_age']=getOneNode($m_xpath, "//machine")->getAttribute("old_files_age");
-	$arrVal['rsync_to']=getOneNode($m_xpath, "//machine")->getAttribute("rsync_to");
-	$arrVal['db_user_name']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
-	$arrVal['db_user_password']=getOneNode($m_xpath, "//machine/databases/db_credentials/db_user_password")->getAttribute("value");
+	$arrVal['bf_home_dir']=query_node($m_xpath, "//machine")->getAttribute("bf_home_dir");
+	$arrVal['old_files_age']=query_node($m_xpath, "//machine")->getAttribute("old_files_age");
+	$arrVal['rsync_to']=query_node($m_xpath, "//machine")->getAttribute("rsync_to");
+	$arrVal['db_user_name']=query_node($m_xpath, "//machine/databases/db_credentials/db_user_name")->getAttribute("value");
+	$arrVal['db_user_password']=query_node($m_xpath, "//machine/databases/db_credentials/db_user_password")->getAttribute("value");
 
-	$resultList=$m_xpath->query( "//machine/databases/db_list/one_db" );
+	$q_results=$m_xpath->query( "//machine/databases/db_list/one_db" );
 	$db_list="";
-	foreach($resultList as $oneNode)
-		$db_list .= $oneNode->getAttribute('name')." ";
+	foreach($q_results as $q_node)
+		$db_list .= $q_node->getAttribute('name')." ";
 	$arrVal['db_list']=$db_list;
 
-	$resultList=$m_xpath->query( "//machine/folders/folder" );
+	$q_results=$m_xpath->query( "//machine/folders/folder" );
 	$folders_list="";
-	foreach($resultList as $oneNode) {
-		$node=trim($oneNode->getAttribute('name'), '/');
+	foreach($q_results as $q_node) {
+		$node=trim($q_node->getAttribute('name'), '/');
 		$folders_list .= "$node ";
 	}
 
 	$arrVal['folders_list']=$folders_list;
 	
-$scriptText='#!/bin/sh
+$script_template='#!/bin/sh
 
 # where to put the backup files
 HOMEDIR="bf_home_dir"
@@ -153,68 +153,68 @@ logExe "rsync -azvr --delete ${HOMEDIR}/ rsync_to"
 
 ';
 	foreach($arrVal as $key => $val)
-		$scriptText = str_replace($key, $val, $scriptText);
+		$script_template = str_replace($key, $val, $script_template);
 	$fileW = fopen('nitroBackup.sh',"w");
-	fwrite($fileW, $scriptText);
+	fwrite($fileW, $script_template);
 	fclose($fileW);
 	return true;
 }
 
-function xmlSave($args) {
-	$scrf= $_SERVER['SCRIPT_FILENAME'];
-	$xmlContents=createXML($args);
-	$localPath=substr($scrf, 0, strpos($scrf,'index')); 
-	$local_file_name=$localPath.gethostname().".xml";
+function save_xml($args) {
+	$script_fn= $_SERVER['SCRIPT_FILENAME'];
+	$xml_contents=create_xml($args);
+	$local_path=substr($script_fn, 0, strpos($script_fn,'index')); 
+	$local_file_name=$local_path.gethostname().".xml";
 	$fileW = fopen($local_file_name,"w");
-	fwrite( $fileW, $xmlContents);
+	fwrite( $fileW, $xml_contents);
 	fclose($fileW);
 	if(!file_exists($local_file_name))
 		throw new Exception("cannot write to `$local_file_name`");
 }
-function createXML($args) {
-	$ddoc = new DOMDocument("1.0","utf-8");
-	$ddoc->formatOutput = true;
+function create_xml($args) {
+	$dom_doc = new DOMDocument("1.0","utf-8");
+	$dom_doc->formatOutput = true;
 	$todayDate=date("Y-m-d");
 
-	$machine = $ddoc->createElement('machine');
+	$machine = $dom_doc->createElement('machine');
 	$machine->setAttribute("name", gethostname());
 	$machine->setAttribute("bf_home_dir", $args['bf_home_dir']);
 	$machine->setAttribute("old_files_age", $args['old_files_age']);
 	$machine->setAttribute("rsync_to", $args['rsync_to']);
-	$ddoc->appendChild($machine);
-	$dbNode = $ddoc->createElement('databases');
-	$machine->appendChild($dbNode);
+	$dom_doc->appendChild($machine);
+	$dom_node = $dom_doc->createElement('databases');
+	$machine->appendChild($dom_node);
 
-	$bNode = $ddoc->createElement('db_credentials');
-	$dbNode->appendChild($bNode);
+	$child_node = $dom_doc->createElement('db_credentials');
+	$dom_node->appendChild($child_node);
 
-	$cNode = $ddoc->createElement('db_user_name');
-	$cNode->setAttribute('value', $args['dbUser']);
-	$bNode->appendChild($cNode);
+	$cchild_node = $dom_doc->createElement('db_user_name');
+	$cchild_node->setAttribute('value', $args['dbUser']);
+	$child_node->appendChild($cchild_node);
 
-	$cNode = $ddoc->createElement('db_user_password');
-	$cNode->setAttribute('value', $args['dbPwd']);
-	$bNode->appendChild($cNode);
+	$cchild_node = $dom_doc->createElement('db_user_password');
+	$cchild_node->setAttribute('value', $args['dbPwd']);
+	$child_node->appendChild($cchild_node);
 
-	$bNode = $ddoc->createElement('db_list');
-	$bNode->setAttribute("count", count($args['dbList']));
-	$dbNode->appendChild($bNode);
+	$child_node = $dom_doc->createElement('db_list');
+	$child_node->setAttribute("count", count($args['dbList']));
+	$dom_node->appendChild($child_node);
 	foreach($args['dbList'] as $oneDb) {
-		$cNode = $ddoc->createElement('one_db');
-		$cNode->setAttribute('name', $oneDb);
-		$bNode->appendChild($cNode);
+		$cchild_node = $dom_doc->createElement('one_db');
+		$cchild_node->setAttribute('name', $oneDb);
+		$child_node->appendChild($cchild_node);
 	}
 
-	$bNode = $ddoc->createElement('folders');
-	$bNode->setAttribute("count", count($args['foldersList']));
-	$machine->appendChild($bNode);
+	$child_node = $dom_doc->createElement('folders');
+	$child_node->setAttribute("count", count($args['foldersList']));
+	$machine->appendChild($child_node);
 	foreach($args['foldersList'] as $oneDb) {
-		$cNode = $ddoc->createElement('folder');
-		$cNode->setAttribute('name', $oneDb);
-		$bNode->appendChild($cNode);
+		$cchild_node = $dom_doc->createElement('folder');
+		$cchild_node->setAttribute('name', $oneDb);
+		$child_node->appendChild($cchild_node);
 	}
 
-	return $ddoc->saveXML();
+	return $dom_doc->saveXML();
 }
 function listDatabases($args) {
 	$mysql_user = $args['dbUser'];
@@ -232,7 +232,6 @@ $dbPwd="";
 try {
 	if($_SERVER["REQUEST_METHOD"] == "POST" ) {
 		if(array_key_exists('ajx', $_POST)) {
-// AJAX		
 			$ajxParams=$_POST['ajx'];
 			$funcName=$ajxParams['verb'];
 			$res=$funcName($ajxParams);
@@ -280,7 +279,7 @@ function ajxAlrRetFls(data) {
 	return alertRetFalse(msg);
 }
 
-function onchkConBtn() {
+function check_conn() {
 	var	dbUser=$('#dbUser').val()
 	,	dbPwd=$('#dbPwd').val()
 	,	arrVal={}
@@ -309,7 +308,7 @@ function onchkConBtn() {
 		}
 	});
 }
-function onDelFolder() {
+function folder_rm() {
 	var	listFolders=$('#listFolders')
 	,	folderToDelete=listFolders.val()
 	;
@@ -318,7 +317,7 @@ function onDelFolder() {
 	listFolders.find('option[value="'+folderToDelete+'"]').remove();
 	$('#addFolder').val(folderToDelete);
 }
-function onAddFolder() {
+function folder_add() {
 	var	folderInput=$('#addFolder')
 	,	folderToAdd=folderInput.val()
 	,	listFolders=$('#listFolders')
@@ -326,7 +325,7 @@ function onAddFolder() {
 	$('#listFolders').append(new Option(folderToAdd, folderToAdd));
 	folderInput.val('');
 }
-function onAddDbToList() {
+function db_add() {
 	var	listDB=$('#listDB')
 	,	listStoredDB=$('#listStoredDB')
 	,	val=listDB.val()
@@ -338,7 +337,7 @@ function onAddDbToList() {
 	listStoredDB.append(new Option(ttext, val));
 	listDB.find('option[value="'+val+'"]').remove();
 }
-function onRmDbFroList() {
+function db_rm() {
 	var	listStoredDB=$('#listStoredDB')
 	,	val=listStoredDB.val()
 	,	ttext=$( "#listStoredDB option:selected" ).text();
@@ -348,7 +347,7 @@ function onRmDbFroList() {
 	$('#listDB').append(new Option(ttext, val));
 	listStoredDB.find('option[value="'+val+'"]').remove();
 }
-function onXMLLoad() {
+function xml_load() {
 	var	arrVal={}
 	,	oneDb
 	,	exists
@@ -391,11 +390,11 @@ function onXMLLoad() {
 		}
 	});
 }
-function onXMLSave() {
+function xml_save() {
 	var	arrVal={}
 	;
 	arrVal=prepareArrayForXML();
-	arrVal['verb']='xmlSave';
+	arrVal['verb']='save_xml';
 	$.ajax({
 		url: "index.php",
 		type: "POST",
@@ -408,7 +407,7 @@ function onXMLSave() {
 		}
 	});
 }
-function onCreateScript(){
+function script_create(){
 	var	arrVal={}
 	;
 	arrVal=prepareArrayForXML();
@@ -459,12 +458,12 @@ function prepareArrayForXML() {
 
 <div id=mainPane style='width:98%;float:left;'>
 <span style='font-size:large;'>
-This machine name:  <a href='?' title=RESET><?=gethostname()?></a>
+Server name:  <a href='?' title=RESET><?=gethostname()?></a>
 </span>
-<input type=button id='xmlLoad' onClick='onXMLLoad()' value='Load cfg'> 
-<input type=button id='xmlSave' onClick='onXMLSave()' value='Save cfg'> 
+<input type=button id='xmlLoad' onClick='xml_load()' value='Load cfg'> 
+<input type=button id='xmlSave' onClick='xml_save()' value='Save cfg'> 
 <!-- textarea style='width:100%' id=texta name=texta rows=30></textarea -->
-<input type=button id='createScript' onClick='onCreateScript()' value='Create Script'> </p>
+<input type=button id='createScript' onClick='script_create()' value='Create Script'> </p>
 <div style="clear:both"></div>
 
 
@@ -474,22 +473,22 @@ This machine name:  <a href='?' title=RESET><?=gethostname()?></a>
 <legend style='border:1px  #50a0a0 solid;background-color:#ccccff'>Databases</legend>
 <p>User: <input type=text name=dbUser id=dbUser size=10 value=<?=$dbUser?>>
 Password: <input type=text name=dbPwd id=dbPwd size=10value=<?=$dbPwd?>>
-<input type=button id='chkConBtn' onClick='onchkConBtn()' value='Check Connection'> </p>
+<input type=button id='chkConBtn' onClick='check_conn()' value='Check Connection'> </p>
 <div style='float:left;'>
 	<p>Currently defined databases:</p>
-	<select multiple=multiple size=12 name=listDB id=listDB ondblclick='onAddDbToList()'></select>
+	<select multiple=multiple size=12 name=listDB id=listDB ondblclick='db_add()'></select>
 </div>
 <div style='float:left;'>
 	<br /> <br /> <br /> <br /> <br /> <br /> <br /> <br /> <br />
 	<p>
-	<input type=button id='addDbToList' onClick='onAddDbToList()' value='Add ->'>
+	<input type=button id='addDbToList' onClick='db_add()' value='Add ->'>
 	</p> <p>
-	<input type=button id='rmDbFroList' onClick='onRmDbFroList()' value='<- Del'>
+	<input type=button id='rmDbFroList' onClick='db_rm()' value='<- Del'>
 	</p>
 </div>
 <div style='float:left;'>
 	<p>Databases being stored:</p>
-	<select multiple=multiple size=12 name='listStoredDB[]' id=listStoredDB ondblclick='onRmDbFroList()'></select>
+	<select multiple=multiple size=12 name='listStoredDB[]' id=listStoredDB ondblclick='db_remove()'></select>
 </div>
 </fieldset>
 </div>
@@ -502,9 +501,9 @@ Password: <input type=text name=dbPwd id=dbPwd size=10value=<?=$dbPwd?>>
 <fieldset>
 <legend>Folders</legend>
 <p>This folder <input type=text name=addFolder id=addFolder>
-<input type=button id='addFolderButton' onClick='onAddFolder()' value='Add'> </p>
+<input type=button id='addFolderButton' onClick='folder_add()' value='Add'> </p>
 <p>Files/folders being stored:</p>
-<select multiple=multiple size=13 name=listFolders[] id=listFolders></select><input type=button id='delFolderButton' onClick='onDelFolder()' value='Delete
+<select multiple=multiple size=13 name=listFolders[] id=listFolders></select><input type=button id='delFolderButton' onClick='folder_rm()' value='Delete
 selected'>
 </p>
 <p></p>
