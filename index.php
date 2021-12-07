@@ -1,36 +1,5 @@
 <?
-$mysql_hostname = "localhost"; 
-$mysql_user = ""; 
-$mysql_password = ""; 
-$mcol = "mysql:host=$mysql_hostname"; 
-$mdb=null;
 
-function dbConnect() {
-	global $mysql_user;
-	global $mysql_password;
-	$mdb = new PDO($mcol , $mysql_user, $mysql_password); 
-	$mdb->exec("SET NAMES 'utf8';");
-	$mdb->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); 
-}
-
-
-function msqlQueryFetchAll($query, $arguments=NULL) {
-	global $mdb;
-	if(null==$mdb)
-		dbConnect();
-
-	$stmt=$mdb->prepare ($query);
-	$stmt->execute( $arguments );
-	return $stmt->fetchall(PDO::FETCH_ASSOC);
-}
-
-function msqlQueryAll($query, $arguments=NULL) {
-	global $mdb;
-	if(null==$mdb)
-		dbConnect();
-	$stmt=$mdb->prepare ($query);
-	$stmt->execute( $arguments );
-}
 function getOneNode($xpath, $query) {
 	$resultList=$xpath->query($query);
 	if(1!=count($resultList))
