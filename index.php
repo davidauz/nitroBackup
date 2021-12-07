@@ -513,7 +513,7 @@ selected'>
 
 <div style="clear:both"></div>
 
-<div id=otherParameters style='float:left;'>
+<div style='float:left;'>
 <fieldset>
 <legend>Other parameters</legend>
 <ul>
@@ -524,6 +524,12 @@ selected'>
 <li>rsync to:
 <input type=text name=rsync_to id=rsync_to></li>
 </ul>
+</fieldset>
+</div>
+<div style='float:left;'>
+<fieldset>
+<legend>Help</legend>
+<a href='javascript:viod(0)'>click to expand</a>
 </fieldset>
 </div>
 
