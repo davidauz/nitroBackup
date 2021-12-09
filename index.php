@@ -66,7 +66,7 @@ function createScript($args) {
 	}
 
 	$arrVal['folders_list']=$folders_list;
-	
+
 $script_template='#!/bin/sh
 
 # where to put the backup files
@@ -75,8 +75,6 @@ HOMEDIR="bf_home_dir"
 DBUSER="db_user_name"
 DBPWD="db_user_password"
 
-# no need to change these
-BACKUPD="/tmp"
 MYHOST=$(hostname)
 DATES=$(date "+%Y%m%d")
 TARFILE="${DATES}.${MYHOST}.backup.tar"
@@ -94,8 +92,6 @@ logExe() {
 	aLog "$COMAND"
 	eval "$COMAND"
 }
-
-
 
 bckpDB () {
 	DBNAME=$1 
@@ -225,11 +221,43 @@ function listDatabases($args) {
 	return $stmt->fetchall(PDO::FETCH_ASSOC);
 }
 
+function output_writing_perms(){
+	$script_filename=$_SERVER["SCRIPT_FILENAME"];
+	$folder=str_replace( "index.php","", $script_filename);
+	$user_name=posix_getpwuid(posix_geteuid())['name'];
+?>
+<p>
+I don't have write permissions to the folder '<code><?=$folder?></code>'.
+</p> <p>
+I need that to write the configuration file.
+</p> <p>
+Please solve this issue and retry.
+</p> <p>
+Usually this is done with this command:
+<pre>
+sudo chown -R <?=$user_name." ".$folder?>
 
-$dbUser="";
-$dbPwd="";
+sudo chmod u+w <?=$folder?>
+</pre>
+</p> <p>
+Please issue the command and try again.
+</p>
+<?
+	return 0;
+}
+function check_write_permissions() {
+	$test_write_file=$_SERVER["SCRIPT_FILENAME"];
+	$test_write_file=str_replace( "index.php", "write_test", $test_write_file);
+	$fileW = fopen($test_write_file,"w");
+		fwrite($fileW, " ");
+	fclose($fileW);
+	if( ! file_exists ($test_write_file))
+		die (output_writing_perms());
+	unlink($test_write_file);
+}
 
 try {
+	check_write_permissions();
 	if($_SERVER["REQUEST_METHOD"] == "POST" ) {
 		if(array_key_exists('ajx', $_POST)) {
 			$ajxParams=$_POST['ajx'];
@@ -260,8 +288,9 @@ try {
 fieldset {background-color:#cccccc;border:1px  #50a0a0 solid;padding:5px;margin:5px;}
 textarea {background-color:#f0f0ff;border:1px  #50a0a0 solid;padding:5px;margin:5px;}
 legend {border:1px #50a0a0 solid;background-color:#ccccff;font-weight: bold;}
-h1 {color: blue;} // styles applied to h1 tag
-p {color: red;} // styles applied to p tag
+h1 {color: blue;}
+.hidn { display: none; }
+.showd { display: block; }
 </style>
 <script type="text/javascript" src="jquery.min.js"></script>
 <script language="javascript" type="text/javascript">
@@ -452,6 +481,11 @@ function prepareArrayForXML() {
 	arrVal['foldersList']=bFolders;
 	return arrVal;
 }
+function toggle_v(obj_id){
+var o=$('#'+obj_id)
+;
+o.attr('class', (o.attr('class')=='hidn')?'showd':'hidn');
+}
 
 </script>
 <body>
@@ -529,7 +563,36 @@ selected'>
 <div style='float:left;'>
 <fieldset>
 <legend>Help</legend>
-<a href='javascript:viod(0)'>click to expand</a>
+<div id='helpTxt' class='hidn'>
+<p>
+This is a crude single file PHP script for managing a simple backup procedure on a Linux server with mysql databases.
+</p> <p>
+<ol>
+<li>Fill in the database connection parameters</li>
+<li>Click '<em>Check connection</em>'</li>
+<li>Choose the DBs to be backed up</li>
+<li>Choose the folders to include in the backup using shell wildcards, e.g.:
+<ul>
+<li>/etc</li>
+<li>/home/user/*txt</li>
+</ul>
+</li>
+<li>In the field '<em>Where to store backup files</em>', enter the path where the backup file will be created in the local machine</li>
+<li>In '<em>Old files max age</em>', enter the number of days to keep your backup files, e.g. if you enter 5 then any backup file older than 5 days will be deleted</li>
+<li>In '<em>rsync to</em>' enter the path to the machine that will store the backup file, e.g. <code>server_name:/path/to/secure/location</code>.</li>
+<li>Click '<em>Save cfg</em>': this will create an <code>XML</code> file named <code>hostname.xml</code> in the script folder containing your cfg data.</li>
+<li>Click '<em>Create script</em>' to write in the script folder the <code>nitroBackup.sh</code></li>
+</ol>
+</p> <p>
+Make sure that your crontab user has ssh key access to the remote server, i.e. no asking passwords.
+</p> <p>
+At this point you can add the <code>nitroBackup.sh</code> script to your <code>crontab</code> and forget about it.
+</p> <p>
+Until that day when you need it, that is.
+</p>
+<a href='javascript:void(0);' onClick='toggle_v("helpTxt");  toggle_v("id_exp");' >Hide</a>
+</div>
+<a id='id_exp' class='showd' href='javascript:void(0);' onClick='toggle_v("helpTxt"); toggle_v("id_exp");' >Expand</a>
 </fieldset>
 </div>
 
